@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SahihAgent - SahihFinder AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="sf-navbar">
+        <div class="sf-brand">
+            <span class="sf-logo">SahihFinder</span>
+            <span class="sf-tagline">Verify the Truth</span>
+        </div>
+        <nav class="sf-links">
+            <a href="https://sahihfinder.com/Wiki" target="_blank">Wiki</a>
+            <a href="https://sahihfinder.com/searcher" target="_blank">Searcher</a>
+            <a href="https://sahihfinder.com/checker" target="_blank">Checker</a>
+            <a href="https://sahihfinder.com/tasbih" target="_blank">Tasbih Counter</a>
+            <a href="https://sahihfinder.com/jumper" target="_blank">Hadith Jumper</a>
+            <button id="open-settings-btn" class="key-btn">API Key</button>
+        </nav>
+    </header>
+
+    <!-- BYOK Configuration Modal -->
+    <div id="api-modal" class="modal">
+        <div class="modal-content">
+            <h2>Configure Your LLM API Key</h2>
+            <p class="modal-desc">
+                Your API key is stored locally in your browser and passed securely to SahihAgent's Python engine only when you send a message. It is never logged or saved on our servers.
+            </p>
+            
+            <label for="provider-select">AI Provider</label>
+            <select id="provider-select">
+                <option value="gemini">Google Gemini (gemini-2.5-flash)</option>
+                <option value="openai">OpenAI (gpt-4o-mini)</option>
+                <option value="claude">Anthropic Claude (claude-3-5-haiku)</option>
+            </select>
+
+            <label for="api-key-input">Your API Key</label>
+            <input type="password" id="api-key-input" placeholder="Paste AIzaSy..., sk-..., or sk-ant-..." autocomplete="off">
+
+            <div class="modal-actions">
+                <button id="clear-key-btn" class="btn-secondary" type="button">Clear Key</button>
+                <button id="save-key-btn" class="btn-primary" type="button">Save & Activate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat Container -->
+    <main class="chat-wrapper">
+        <div class="chat-header">
+            <div class="agent-badge">AI</div>
+            <div class="header-info">
+                <h1>SahihAgent</h1>
+                <p>Cross-referenced Islamic fact & Hadith verification assistant</p>
+            </div>
+            <span id="status-badge" class="status-badge unconfigured">No Key Set</span>
+        </div>
+
+        <div id="chat-box" class="chat-box">
+            <div class="message bot-message">
+                <div class="msg-bubble">
+                    As-salamu alaykum! I am <strong>SahihAgent</strong>. Click <strong>🔑 API Key</strong> in the top bar to insert your Gemini, OpenAI, or Claude API key, then paste any Hadith, viral quote, or claim below to verify its authenticity.
+                </div>
+            </div>
+        </div>
+
+        <div class="quick-prompts">
+            <button onclick="sendQuickPrompt('Verify the Hadith: Seek knowledge even unto China')">Verify: "Seek knowledge even unto China"</button>
+            <button onclick="sendQuickPrompt('What is the grading of: Actions are judged by intentions?')">Check: "Actions are judged by intentions"</button>
+            <button onclick="sendQuickPrompt('How does SahihFinder verify online claims?')">How do you verify sources?</button>
+        </div>
+
+        <form id="chat-form" class="chat-input-area">
+            <input type="text" id="user-input" placeholder="Insert your API key first to start verifying..." disabled autocomplete="off" required>
+            <button type="submit" id="send-btn" disabled>Verify</button>
+        </form>
+    </main>
+
+    <footer class="sf-footer">
+        © 2026 SahihFinder - Shahadah Studios Elite
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
