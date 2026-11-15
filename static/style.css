@@ -1,0 +1,330 @@
+:root {
+    --primary-emerald: #0f5132;
+    --dark-emerald: #093621;
+    --accent-gold: #d4af37;
+    --bg-sand: #f8f9fa;
+    --card-bg: #ffffff;
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: var(--bg-sand);
+    color: var(--text-dark);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.sf-navbar {
+    background-color: var(--dark-emerald);
+    color: white;
+    padding: 0.9rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid var(--accent-gold);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.sf-logo {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--accent-gold);
+}
+
+.sf-tagline {
+    font-size: 0.85rem;
+    margin-left: 0.5rem;
+    color: #cbd5e1;
+}
+
+.sf-links {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+}
+
+.sf-links a {
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+
+.sf-links a:hover {
+    color: var(--accent-gold);
+}
+
+.key-btn {
+    background-color: var(--accent-gold);
+    color: var(--dark-emerald);
+    border: none;
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 1.75rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 440px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.modal-content h2 {
+    color: var(--dark-emerald);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.modal-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 1.2rem;
+    line-height: 1.4;
+}
+
+.modal-content label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+.modal-content select,
+.modal-content input {
+    width: 100%;
+    padding: 0.65rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.btn-primary {
+    background: var(--primary-emerald);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: var(--text-dark);
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.chat-wrapper {
+    max-width: 820px;
+    width: 95%;
+    margin: 2rem auto;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    height: 75vh;
+    overflow: hidden;
+}
+
+.chat-header {
+    background-color: var(--primary-emerald);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-info {
+    flex: 1;
+}
+
+.agent-badge {
+    background-color: var(--accent-gold);
+    color: var(--dark-emerald);
+    font-weight: 800;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-header h1 {
+    font-size: 1.15rem;
+}
+
+.chat-header p {
+    font-size: 0.8rem;
+    color: #d1fae5;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.status-badge.unconfigured {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-badge.configured {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.chat-box {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.message {
+    display: flex;
+    max-width: 80%;
+}
+
+.user-message {
+    align-self: flex-end;
+}
+
+.bot-message {
+    align-self: flex-start;
+}
+
+.msg-bubble {
+    padding: 0.85rem 1.1rem;
+    border-radius: 12px;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+}
+
+.user-message .msg-bubble {
+    background-color: var(--primary-emerald);
+    color: white;
+    border-bottom-right-radius: 2px;
+}
+
+.bot-message .msg-bubble {
+    background-color: #f1f5f9;
+    color: var(--text-dark);
+    border: 1px solid var(--border-color);
+    border-bottom-left-radius: 2px;
+}
+
+.quick-prompts {
+    padding: 0.5rem 1.5rem;
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    background: #fafafa;
+    border-top: 1px solid var(--border-color);
+}
+
+.quick-prompts button {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.8rem;
+    color: var(--primary-emerald);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.quick-prompts button:hover {
+    background: var(--primary-emerald);
+    color: white;
+}
+
+.chat-input-area {
+    display: flex;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background: white;
+    gap: 0.75rem;
+}
+
+.chat-input-area input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.chat-input-area button {
+    background-color: var(--primary-emerald);
+    color: white;
+    border: none;
+    padding: 0 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.chat-input-area button:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.sf-footer {
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: auto;
+}
