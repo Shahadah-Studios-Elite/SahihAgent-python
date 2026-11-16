@@ -26,7 +26,6 @@ let pyVerifyClaim = null;
 let pyLoadingStarted = false;
 let chatHistory = [];
 
-// Strip accidental newlines or non-ASCII characters when pasting keys
 function cleanKey(raw) {
     return (raw || "").replace(/[^\x21-\x7E]/g, "").trim();
 }
@@ -68,7 +67,7 @@ async function loadPythonInBackground() {
             });
         }
         const pyodide = await loadPyodide();
-        const code = await (await fetch("sahih_engine.py")).text();
+        const code = await (await fetch("sahih_engine.py?v=" + Date.now())).text();
         await pyodide.runPythonAsync(code);
         pyVerifyClaim = pyodide.globals.get("verify_claim");
         if (pyStatus) pyStatus.textContent = "Python WebAssembly Engine Ready";
@@ -100,7 +99,7 @@ async function directVerify(provider, apiKey, message) {
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
-        return data.candidates[0].content.parts[0].text;
+        return data.candidates.at(0).content.parts.at(0).text;
     } else {
         const messages = [{ role: "system", content: SYSTEM_PROMPT }];
         chatHistory.slice(-6).forEach(m => messages.push({ role: m.role === "user" ? "user" : "assistant", content: m.text }));
@@ -120,11 +119,10 @@ async function directVerify(provider, apiKey, message) {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
-        return data.choices[0].message.content;
+        return data.choices.at(0).message.content;
     }
 }
 
-// Modal Controls
 openSettingsBtn.addEventListener("click", () => apiModal.classList.add("active"));
 apiModal.addEventListener("click", (e) => {
     if (e.target === apiModal) apiModal.classList.remove("active");
@@ -185,12 +183,7 @@ chatForm.addEventListener("submit", async (e) => {
     try {
         let reply;
         if (pyVerifyClaim) {
-            try {
-                reply = await pyVerifyClaim(provider, apiKey, message, JSON.stringify(chatHistory));
-            } catch (pyErr) {
-                // Automatic fallback to native JS fetch if Pyodide pyfetch is blocked
-                reply = await directVerify(provider, apiKey, message);
-            }
+            reply = await pyVerifyClaim(provider, apiKey, message, JSON.stringify(chatHistory));
         } else {
             reply = await directVerify(provider, apiKey, message);
         }
@@ -199,11 +192,7 @@ chatForm.addEventListener("submit", async (e) => {
         chatHistory.push({ role: "user", text: message });
         chatHistory.push({ role: "model", text: reply });
     } catch (error) {
-        if (error.message.includes("Failed to fetch")) {
-            loadingBubble.textContent = "Network Blocked ('Failed to fetch'): Please disable any ad-blocker/Brave Shields on this site, check your internet connection, and re-paste your API key.";
-        } else {
-            loadingBubble.textContent = `Error: ${error.message}`;
-        }
+        loadingBubble.textContent = `Error: ${error.message}`;
     } finally {
         userInput.disabled = false;
         sendBtn.disabled = false;
@@ -213,3 +202,4 @@ chatForm.addEventListener("submit", async (e) => {
 
 updateUIState();
 setTimeout(loadPythonInBackground, 1000);
+
