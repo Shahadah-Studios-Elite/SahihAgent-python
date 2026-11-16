@@ -1,41 +1,45 @@
-name: Build, Test & Deploy SahihAgent
+name: Test Python & Deploy to GitHub Pages
 
 on:
   push:
     branches:
       - main
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  verify-and-build:
+  validate-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python to verify syntax
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Python dependencies & lint
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          python -m py_compile main.py
+      - name: Compile-check Python engine
+        run: python -m py_compile sahih_engine.py
 
-      - name: Build Docker container
-        run: docker build -t sahih-agent:latest .
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
 
-  deploy:
-    needs: verify-and-build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Production Deployment
-        env:
-          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
-        run: |
-          if [ -z "$DEPLOY_WEBHOOK_URL" ]; then
-            echo "No DEPLOY_WEBHOOK_URL secret configured. Skipping webhook call."
-            exit 0
-          fi
-          curl -f -X POST "$DEPLOY_WEBHOOK_URL"
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
