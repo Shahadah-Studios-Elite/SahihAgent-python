@@ -3,6 +3,7 @@ const userInput = document.getElementById("user-input");
 const chatBox = document.getElementById("chat-box");
 const sendBtn = document.getElementById("send-btn");
 const statusBadge = document.getElementById("status-badge");
+const pyStatus = document.getElementById("py-status");
 
 const apiModal = document.getElementById("api-modal");
 const openSettingsBtn = document.getElementById("open-settings-btn");
@@ -11,21 +12,45 @@ const clearKeyBtn = document.getElementById("clear-key-btn");
 const providerSelect = document.getElementById("provider-select");
 const apiKeyInput = document.getElementById("api-key-input");
 
+let pyodide = null;
+let pyVerifyClaim = null;
 let chatHistory = [];
 
-function checkCredentials() {
+// Boot Pyodide and load sahih_engine.py
+async function initPythonEngine() {
+    try {
+        pyodide = await loadPyodide();
+        const response = await fetch("sahih_engine.py");
+        const pythonCode = await response.text();
+        await pyodide.runPythonAsync(pythonCode);
+        pyVerifyClaim = pyodide.globals.get("verify_claim");
+
+        pyStatus.textContent = "Python WebAssembly Engine Ready";
+        updateUIState();
+    } catch (err) {
+        pyStatus.textContent = "Failed to load Python engine.";
+        console.error(err);
+    }
+}
+
+function updateUIState() {
     const savedKey = localStorage.getItem("sahih_api_key");
     const savedProvider = localStorage.getItem("sahih_provider") || "gemini";
-
     providerSelect.value = savedProvider;
+
+    if (!pyVerifyClaim) {
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+        userInput.placeholder = "Loading Python engine...";
+        return;
+    }
 
     if (savedKey) {
         apiKeyInput.value = savedKey;
         userInput.disabled = false;
         sendBtn.disabled = false;
         userInput.placeholder = "Paste a quote, Hadith, or question to verify...";
-        const labels = { gemini: "Gemini Active", openai: "OpenAI Active", claude: "Claude Active" };
-        statusBadge.textContent = labels[savedProvider] || "Active";
+        statusBadge.textContent = savedProvider === "gemini" ? "Gemini Active" : "OpenAI Active";
         statusBadge.className = "status-badge configured";
     } else {
         userInput.disabled = true;
@@ -51,14 +76,14 @@ saveKeyBtn.addEventListener("click", () => {
     localStorage.setItem("sahih_api_key", key);
     localStorage.setItem("sahih_provider", provider);
     apiModal.classList.remove("active");
-    checkCredentials();
+    updateUIState();
 });
 
 clearKeyBtn.addEventListener("click", () => {
     localStorage.removeItem("sahih_api_key");
     apiKeyInput.value = "";
     apiModal.classList.remove("active");
-    checkCredentials();
+    updateUIState();
 });
 
 function appendMessage(text, isUser) {
@@ -90,37 +115,22 @@ chatForm.addEventListener("submit", async (e) => {
     const apiKey = localStorage.getItem("sahih_api_key");
     const provider = localStorage.getItem("sahih_provider") || "gemini";
 
-    if (!message || !apiKey) return;
+    if (!message || !apiKey || !pyVerifyClaim) return;
 
     appendMessage(message, true);
     userInput.value = "";
     userInput.disabled = true;
     sendBtn.disabled = true;
 
-    const loadingBubble = appendMessage("Verifying sources via Python engine...", false);
+    const loadingBubble = appendMessage("Running Python verification...", false);
 
     try {
-        const response = await fetch("/api/chat", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-API-Key": apiKey
-            },
-            body: JSON.stringify({
-                provider: provider,
-                message: message,
-                history: chatHistory
-            })
-        });
+        // Call the Python function directly in the browser
+        const reply = await pyVerifyClaim(provider, apiKey, message, JSON.stringify(chatHistory));
+        loadingBubble.textContent = reply;
 
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.detail || "Verification failed");
-        }
-
-        loadingBubble.textContent = data.reply;
         chatHistory.push({ role: "user", text: message });
-        chatHistory.push({ role: "model", text: data.reply });
+        chatHistory.push({ role: "model", text: reply });
     } catch (error) {
         loadingBubble.textContent = `Error: ${error.message}`;
     } finally {
@@ -130,4 +140,4 @@ chatForm.addEventListener("submit", async (e) => {
     }
 });
 
-checkCredentials();
+initPythonEngine();
