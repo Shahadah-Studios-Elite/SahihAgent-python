@@ -3,42 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SahihAgent - SahihFinder AI</title>
+    <title>SahihAgent - SahihFinder AI Verification</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Load Pyodide (Python in the Browser) -->
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body>
     <header class="sf-navbar">
         <div class="sf-brand">
-            <span class="sf-logo">SahihFinder</span>
+            <span class="sf-logo">☪ SahihFinder</span>
             <span class="sf-tagline">Verify the Truth</span>
         </div>
         <nav class="sf-links">
-            <a href="https://sahihfinder.com/Wiki" target="_blank">Wiki</a>
-            <a href="https://sahihfinder.com/searcher" target="_blank">Searcher</a>
-            <a href="https://sahihfinder.com/checker" target="_blank">Checker</a>
-            <a href="https://sahihfinder.com/tasbih" target="_blank">Tasbih Counter</a>
-            <a href="https://sahihfinder.com/jumper" target="_blank">Hadith Jumper</a>
-            <button id="open-settings-btn" class="key-btn">API Key</button>
+            <a href="https://sahihfinder.com" target="_blank">Wiki</a>
+            <a href="https://sahihfinder.com" target="_blank">Searcher</a>
+            <a href="https://sahihfinder.com" target="_blank">Checker</a>
+            <a href="https://sahihfinder.com" target="_blank">Tasbih Counter</a>
+            <a href="https://sahihfinder.com" target="_blank">Hadith Jumper</a>
+            <button id="open-settings-btn" class="key-btn">🔑 API Key</button>
         </nav>
     </header>
 
-    <!-- BYOK Configuration Modal -->
+    <!-- API Key Setup Modal -->
     <div id="api-modal" class="modal">
         <div class="modal-content">
             <h2>Configure Your LLM API Key</h2>
             <p class="modal-desc">
-                Your API key is stored locally in your browser and passed securely to SahihAgent's Python engine only when you send a message. It is never logged or saved on our servers.
+                SahihAgent runs Python directly inside your browser via WebAssembly. Your API key stays in your browser's local storage and is never sent to any third-party server.
             </p>
             
             <label for="provider-select">AI Provider</label>
             <select id="provider-select">
                 <option value="gemini">Google Gemini (gemini-2.5-flash)</option>
                 <option value="openai">OpenAI (gpt-4o-mini)</option>
-                <option value="claude">Anthropic Claude (claude-3-5-haiku)</option>
             </select>
 
             <label for="api-key-input">Your API Key</label>
-            <input type="password" id="api-key-input" placeholder="Paste AIzaSy..., sk-..., or sk-ant-..." autocomplete="off">
+            <input type="password" id="api-key-input" placeholder="Paste AIzaSy... or sk-..." autocomplete="off">
 
             <div class="modal-actions">
                 <button id="clear-key-btn" class="btn-secondary" type="button">Clear Key</button>
@@ -53,7 +54,7 @@
             <div class="agent-badge">AI</div>
             <div class="header-info">
                 <h1>SahihAgent</h1>
-                <p>Cross-referenced Islamic fact & Hadith verification assistant</p>
+                <p id="py-status">Initializing Python engine...</p>
             </div>
             <span id="status-badge" class="status-badge unconfigured">No Key Set</span>
         </div>
@@ -61,7 +62,7 @@
         <div id="chat-box" class="chat-box">
             <div class="message bot-message">
                 <div class="msg-bubble">
-                    As-salamu alaykum! I am <strong>SahihAgent</strong>. Click <strong>🔑 API Key</strong> in the top bar to insert your Gemini, OpenAI, or Claude API key, then paste any Hadith, viral quote, or claim below to verify its authenticity.
+                    As-salamu alaykum! I am <strong>SahihAgent</strong>. Click <strong>🔑 API Key</strong> in the top bar to insert your Gemini or OpenAI API key, then paste any Hadith, viral quote, or claim below to verify its authenticity.
                 </div>
             </div>
         </div>
@@ -73,7 +74,7 @@
         </div>
 
         <form id="chat-form" class="chat-input-area">
-            <input type="text" id="user-input" placeholder="Insert your API key first to start verifying..." disabled autocomplete="off" required>
+            <input type="text" id="user-input" placeholder="Loading Python engine..." disabled autocomplete="off" required>
             <button type="submit" id="send-btn" disabled>Verify</button>
         </form>
     </main>
@@ -82,6 +83,6 @@
         © 2026 SahihFinder - Shahadah Studios Elite
     </footer>
 
-    <script src="script.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
