@@ -26,9 +26,13 @@ let pyVerifyClaim = null;
 let pyLoadingStarted = false;
 let chatHistory = [];
 
-// 1. Unlock UI Immediately (Do NOT wait for Pyodide!)
+// Strip accidental newlines or non-ASCII characters when pasting keys
+function cleanKey(raw) {
+    return (raw || "").replace(/[^\x21-\x7E]/g, "").trim();
+}
+
 function updateUIState() {
-    const savedKey = localStorage.getItem("sahih_api_key");
+    const savedKey = cleanKey(localStorage.getItem("sahih_api_key"));
     const savedProvider = localStorage.getItem("sahih_provider") || "gemini";
     providerSelect.value = savedProvider;
 
@@ -48,14 +52,12 @@ function updateUIState() {
     }
 }
 
-// 2. Load Pyodide silently in the background after the page renders
 async function loadPythonInBackground() {
     if (pyLoadingStarted) return;
     pyLoadingStarted = true;
     if (pyStatus) pyStatus.textContent = "Syncing Python engine in background...";
 
     try {
-        // Dynamically inject Pyodide script so it never blocks HTML rendering
         if (!window.loadPyodide) {
             await new Promise((resolve, reject) => {
                 const s = document.createElement("script");
@@ -71,13 +73,12 @@ async function loadPythonInBackground() {
         pyVerifyClaim = pyodide.globals.get("verify_claim");
         if (pyStatus) pyStatus.textContent = "Python WebAssembly Engine Ready";
     } catch (err) {
-        console.warn("Pyodide background load skipped, using instant JS mode:", err);
+        console.warn("Pyodide background load skipped:", err);
         if (pyStatus) pyStatus.textContent = "Instant Verification Engine Ready";
     }
 }
 
-// 3. Instant fallback if user sends a message while Pyodide is still downloading
-async function instantFallbackVerify(provider, apiKey, message) {
+async function directVerify(provider, apiKey, message) {
     if (provider === "gemini") {
         const contents = chatHistory.slice(-6).map(m => ({
             role: m.role === "user" ? "user" : "model",
@@ -98,8 +99,8 @@ async function instantFallbackVerify(provider, apiKey, message) {
             }
         );
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || "Gemini API Error");
-        return data.candidates.content.parts.text;
+        if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+        return data.candidates[0].content.parts[0].text;
     } else {
         const messages = [{ role: "system", content: SYSTEM_PROMPT }];
         chatHistory.slice(-6).forEach(m => messages.push({ role: m.role === "user" ? "user" : "assistant", content: m.text }));
@@ -107,12 +108,19 @@ async function instantFallbackVerify(provider, apiKey, message) {
 
         const res = await fetch("https://openai.com", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-            body: JSON.stringify({ model: "gpt-4o-mini", messages, temperature: 0.3 })
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages,
+                temperature: 0.3
+            })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || "OpenAI API Error");
-        return data.choices.message.content;
+        if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+        return data.choices[0].message.content;
     }
 }
 
@@ -123,7 +131,7 @@ apiModal.addEventListener("click", (e) => {
 });
 
 saveKeyBtn.addEventListener("click", () => {
-    const key = apiKeyInput.value.trim();
+    const key = cleanKey(apiKeyInput.value);
     const provider = providerSelect.value;
     if (!key) return alert("Please paste a valid API key.");
     localStorage.setItem("sahih_api_key", key);
@@ -152,7 +160,7 @@ function appendMessage(text, isUser) {
 }
 
 function sendQuickPrompt(text) {
-    if (!localStorage.getItem("sahih_api_key")) {
+    if (!cleanKey(localStorage.getItem("sahih_api_key"))) {
         apiModal.classList.add("active");
         return;
     }
@@ -163,7 +171,7 @@ function sendQuickPrompt(text) {
 chatForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const message = userInput.value.trim();
-    const apiKey = localStorage.getItem("sahih_api_key");
+    const apiKey = cleanKey(localStorage.getItem("sahih_api_key"));
     const provider = localStorage.getItem("sahih_provider") || "gemini";
     if (!message || !apiKey) return;
 
@@ -175,16 +183,27 @@ chatForm.addEventListener("submit", async (e) => {
     const loadingBubble = appendMessage("Verifying sources...", false);
 
     try {
-        // Uses Python once loaded, or instant JS during the first few seconds!
-        const reply = pyVerifyClaim
-            ? await pyVerifyClaim(provider, apiKey, message, JSON.stringify(chatHistory))
-            : await instantFallbackVerify(provider, apiKey, message);
+        let reply;
+        if (pyVerifyClaim) {
+            try {
+                reply = await pyVerifyClaim(provider, apiKey, message, JSON.stringify(chatHistory));
+            } catch (pyErr) {
+                // Automatic fallback to native JS fetch if Pyodide pyfetch is blocked
+                reply = await directVerify(provider, apiKey, message);
+            }
+        } else {
+            reply = await directVerify(provider, apiKey, message);
+        }
 
         loadingBubble.textContent = reply;
         chatHistory.push({ role: "user", text: message });
         chatHistory.push({ role: "model", text: reply });
     } catch (error) {
-        loadingBubble.textContent = `Error: ${error.message}`;
+        if (error.message.includes("Failed to fetch")) {
+            loadingBubble.textContent = "Network Blocked ('Failed to fetch'): Please disable any ad-blocker/Brave Shields on this site, check your internet connection, and re-paste your API key.";
+        } else {
+            loadingBubble.textContent = `Error: ${error.message}`;
+        }
     } finally {
         userInput.disabled = false;
         sendBtn.disabled = false;
@@ -192,6 +211,5 @@ chatForm.addEventListener("submit", async (e) => {
     }
 });
 
-// Run immediately on page open
 updateUIState();
 setTimeout(loadPythonInBackground, 1000);
