@@ -15,7 +15,6 @@ Guidelines:
 """
 
 def sanitize_key(raw_key: str) -> str:
-    """Remove accidental whitespace, newlines, or hidden characters."""
     if not raw_key:
         return ""
     return "".join(ch for ch in raw_key.strip() if 33 <= ord(ch) <= 126)
@@ -23,108 +22,82 @@ def sanitize_key(raw_key: str) -> str:
 async def verify_claim(provider: str, api_key: str, message: str, history_json: str) -> str:
     clean_key = sanitize_key(api_key)
     if not clean_key:
-        raise Exception("[DEBUG] API Key is empty after removing invalid spaces/characters.")
+        raise Exception("API Key is empty.")
+
+    history = json.loads(history_json) if history_json else []
+    recent_history = history[-6:] if len(history) > 6 else history
 
     try:
-        history = json.loads(history_json) if history_json else []
-    except Exception as e:
-        raise Exception(f"[DEBUG] Failed to parse chat history JSON: {e}")
-
-    try:
-        # ==========================================
-        # 1. GOOGLE GEMINI
-        # ==========================================
         if provider == "gemini":
             url = f"https://googleapis.com{clean_key}"
             contents = [
                 {"role": "user" if m.get("role") == "user" else "model", "parts": [{"text": m.get("text", "")}]}
-                for m in history[-6:]
+                for m in recent_history
             ]
             contents.append({"role": "user", "parts": [{"text": message}]})
-
-            payload = {
-                "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-                "contents": contents,
-                "generationConfig": {"temperature": 0.3}
-            }
 
             response = await pyfetch(
                 url,
                 method="POST",
                 headers={"Content-Type": "application/json"},
-                body=json.dumps(payload)
+                body=json.dumps({
+                    "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+                    "contents": contents,
+                    "generationConfig": {"temperature": 0.3}
+                })
             )
 
             raw_text = await response.string()
-            try:
-                data = json.loads(raw_text)
-            except Exception:
-                raise Exception(f"[DEBUG Gemini HTTP {response.status}] Non-JSON response: {raw_text[:250]}")
+            data = json.loads(raw_text)
 
             if not response.ok:
                 err_msg = data.get("error", {}).get("message", raw_text[:250])
-                raise Exception(f"[DEBUG Gemini HTTP {response.status}] {err_msg}")
+                raise Exception(f"Gemini HTTP {response.status}: {err_msg}")
 
-            # Safely extract text from candidates[0]
-            candidates = data.get("candidates", [])
-            if not candidates:
-                raise Exception(f"[DEBUG Gemini] Empty candidates returned: {raw_text[:250]}")
+            first_candidate = next(iter(data.get("candidates", [])), {})
+            first_part = next(iter(first_candidate.get("content", {}).get("parts", [])), {})
+            reply = first_part.get("text", "")
+            if not reply:
+                raise Exception(f"Empty Gemini reply: {raw_text[:250]}")
+            return reply
 
-            parts = candidates[0].get("content", {}).get("parts", [])
-            if not parts:
-                raise Exception(f"[DEBUG Gemini] Empty content parts returned: {raw_text[:250]}")
-
-            return parts[0].get("text", "[DEBUG Gemini] No text field in response.")
-
-        # ==========================================
-        # 2. OPENAI
-        # ==========================================
         elif provider == "openai":
-            url = "https://openai.com"
             messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-            for m in history[-6:]:
+            for m in recent_history:
                 role = "user" if m.get("role") == "user" else "assistant"
                 messages.append({"role": role, "content": m.get("text", "")})
             messages.append({"role": "user", "content": message})
 
-            payload = {
-                "model": "gpt-4o-mini",
-                "messages": messages,
-                "temperature": 0.3
-            }
-
             response = await pyfetch(
-                url,
+                "https://openai.com",
                 method="POST",
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {clean_key}"
                 },
-                body=json.dumps(payload)
+                body=json.dumps({
+                    "model": "gpt-4o-mini",
+                    "messages": messages,
+                    "temperature": 0.3
+                })
             )
 
             raw_text = await response.string()
-            try:
-                data = json.loads(raw_text)
-            except Exception:
-                raise Exception(f"[DEBUG OpenAI HTTP {response.status}] Non-JSON response: {raw_text[:250]}")
+            data = json.loads(raw_text)
 
             if not response.ok:
                 err_msg = data.get("error", {}).get("message", raw_text[:250])
-                raise Exception(f"[DEBUG OpenAI HTTP {response.status}] {err_msg}")
+                raise Exception(f"OpenAI HTTP {response.status}: {err_msg}")
 
-            # Safely extract text from choices[0]
-            choices = data.get("choices", [])
-            if not choices:
-                raise Exception(f"[DEBUG OpenAI] Empty choices returned: {raw_text[:250]}")
-
-            return choices[0].get("message", {}).get("content", "[DEBUG OpenAI] No content field in response.")
+            first_choice = next(iter(data.get("choices", [])), {})
+            reply = first_choice.get("message", {}).get("content", "")
+            if not reply:
+                raise Exception(f"Empty OpenAI reply: {raw_text[:250]}")
+            return reply
 
         else:
-            raise Exception(f"[DEBUG] Unknown provider '{provider}'. Expected 'gemini' or 'openai'.")
+            raise Exception(f"Unknown provider: {provider}")
 
     except Exception as e:
-        # Print full traceback to browser DevTools Console (F12) for easy inspection
-        print("=== SahihAgent Python Traceback ===")
         traceback.print_exc()
         raise Exception(str(e))
